@@ -87,7 +87,7 @@
     → 智慧、商业才能、沟通/写作/教育天赋
 
   Hamsa (Jupiter in Kendra + 入旺Cancer/入庙Sagittarius或Pisces)
-    → 学识、精神智慧、道德感、教育/咨询/法律
+    → 学识、精神智慧、道德感、教育/学术/法律
 
   Malavya (Venus in Kendra + 入旺Pisces/入庙Taurus或Libra)
     → 艺术鉴赏、人际魅力、奢华享受、美学/设计/外交
@@ -138,7 +138,7 @@ a) 加持赛道 — 格局命中的领域
    多个Raja Yoga → 管理/权力赛道有先天加持
    Dhana Yoga强 → 财富积累赛道有加持
    AK/AmK力量强 → 事业/灵魂使命赛道有加持
-   Gajakesari → 教育/咨询赛道有加持
+   Gajakesari → 教育/学术赛道有加持
 
 b) 经营赛道 — 格局缺失但可后天发展的领域
    无正式格局但功能性等价物存在（如10宫主强+SAV>32）

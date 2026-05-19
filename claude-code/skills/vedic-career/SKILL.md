@@ -139,7 +139,7 @@ Phase 4 Part 3   → 写入 career_phase4c.md
 - L10 Shadbala → structured_data 预分析·Shadbala排名
 - L10 尊贵度 → structured_data 预分析·行星尊贵度
 - 10宫SAV → structured_data SAV表
-- D10概述 → structured_data D10数据 + core p3_divisional（如有）
+- D10概述 → structured_data D10数据 + core p3b_divisional（如有）
 
 **步骤:**
 1. 确定 **L10(10宫主)** 的落宫、星座、状态（从预分析读取，不重算）
@@ -213,7 +213,7 @@ Phase 4 Part 3   → 写入 career_phase4c.md
 
 **数据引用:**
 - D9数据 → structured_data D9表（公式验证过，10/10准确度）
-- D9品质 → core p3_divisional（如有）
+- D9品质 → core p3a_d9（如有，含D9逐星深度审计）
 
 **步骤:**
 1. **现实锚点:** 回顾Phase1 D1 L10落点

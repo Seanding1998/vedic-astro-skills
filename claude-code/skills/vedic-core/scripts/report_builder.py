@@ -1,4 +1,4 @@
-"""
+﻿"""
 Vedic Report Builder — Universal MD → HTML Pipeline
 =====================================================
 Supports ALL Vedic skill outputs: Core, Career, Love, Q&A
@@ -257,9 +257,17 @@ SECTION_REGISTRY = [
 
 
 def find_files(folder):
-    """Auto-detect MD files using flexible naming."""
+    """Auto-detect MD files using flexible naming.
+    
+    Strategy:
+      1. Try exact matches from SECTION_REGISTRY
+      2. Dynamic scan: find any p*_*.md not yet matched, group by prefix
+      3. Glob for qa_*.md
+    """
     found = {}  # canonical_key -> (priority, en_title, cn_title, content)
+    matched_files = set()  # track which files are already matched
 
+    # Pass 1: exact matches from registry
     for priority, key, en_title, cn_title, patterns in SECTION_REGISTRY:
         if not patterns:
             continue
@@ -268,10 +276,57 @@ def find_files(folder):
             if os.path.exists(path):
                 with open(path, "r", encoding="utf-8") as f:
                     found[key] = (priority, en_title, cn_title, f.read())
+                matched_files.add(pat)
                 print(f"  + {pat} -> {key}")
                 break
 
-    # Q&A: glob for qa_*.md
+    # Pass 2: dynamic scan for p*_*.md files not yet matched
+    # Groups: p1->core, p2->planets, p3->divisional, p4->houses, p5->life
+    PREFIX_MAP = {
+        "p2": (20, "planets",    "Part II: Planetary Audit",      "第二部分：行星审计"),
+        "p3": (30, "divisional", "Part III: Divisional Analysis",  "第三部分：分盘分析"),
+        "p4": (40, "houses",     "Part IV: House Diagnostics",     "第四部分：宫位诊断"),
+        "p5": (50, "life",       "Part V: Life Architecture",      "第五部分：人生架构总结"),
+    }
+    prefix_files = {}  # prefix -> [(filename, content), ...]
+    
+    all_md = sorted(glob.glob(os.path.join(folder, "p*_*.md")))
+    for path in all_md:
+        fname = os.path.basename(path)
+        if fname in matched_files:
+            continue
+        # Extract prefix: p2a_xxx.md -> "p2", p3b_yyy.md -> "p3"
+        m = re.match(r"(p\d)", fname)
+        if m:
+            prefix = m.group(1)
+            if prefix in PREFIX_MAP:
+                if prefix not in prefix_files:
+                    prefix_files[prefix] = []
+                with open(path, "r", encoding="utf-8") as f:
+                    prefix_files[prefix].append((fname, f.read()))
+    
+    # Merge prefix groups into found (combine multiple files of same prefix)
+    for prefix, files in prefix_files.items():
+        priority, base_key, en_title, cn_title = PREFIX_MAP[prefix]
+        if len(files) == 1:
+            fname, content = files[0]
+            suffix = re.match(r"p\d(\w?)_", fname)
+            key = f"{base_key}_{suffix.group(1)}" if suffix and suffix.group(1) else base_key
+            if key not in found:
+                sub_label = f" ({suffix.group(1).upper()})" if suffix and suffix.group(1) else ""
+                found[key] = (priority, en_title + sub_label, cn_title + sub_label, content)
+                print(f"  + {fname} -> {key} (dynamic)")
+        else:
+            for i, (fname, content) in enumerate(files):
+                suffix = re.match(r"p\d(\w?)_", fname)
+                sub = suffix.group(1).upper() if suffix and suffix.group(1) else chr(65 + i)
+                key = f"{base_key}_{sub.lower()}"
+                sub_priority = priority + i
+                if key not in found:
+                    found[key] = (sub_priority, f"{en_title} ({sub})", f"{cn_title} ({sub})", content)
+                    print(f"  + {fname} -> {key} (dynamic)")
+
+    # Pass 3: Q&A glob
     qa_files = sorted(glob.glob(os.path.join(folder, "qa_*.md")))
     if qa_files:
         combined = []
@@ -282,6 +337,7 @@ def find_files(folder):
         found["qa"] = (100, "Appendix: Q&A", "附录：追问答疑", "\n\n---\n\n".join(combined))
 
     return found
+
 
 
 def detect_package(found, lang="cn"):

@@ -96,7 +96,8 @@ structured_data.md 随阶段分3次写入（每次≤200行）：
   □ D1行星位置：9颗行星 + Lagna 的星座和度数
   □ Chara Karakas：AK/AmK/BK/MK/DK/PK/GK排列
   □ Vimsottari Dasha：至少大运(Mahadasha)的起止日期
-  □ Ayanamsa：用的什么岁差体系
+  □ Ayanamsa：用的什么岁差体系（本系统基于Lahiri设计，使用JHora默认即可）
+    ⚠️ 非Lahiri岁差（KP/Raman/Pushya等）会导致度数偏差，影响分析准确度
 
 🟡 重要数据（有则分析更准确，无则降级处理）：
   □ SAV/BAV：12宫 Ashtakavarga 数值
@@ -460,7 +461,22 @@ D9计算公式：
 校验摘要：
 ```
 D1校验（规则1-10）：
- 1. SAV=337            7. Ayanamsa一致
+ 1. SAV=337            7. Ayanamsa检测
+
+校验7增强 — Ayanamsa主动检测（仅PDF/文本通道）：
+```
+在数据源中搜索以下关键词：
+  "Lahiri" / "Chitrapaksha"     → ✅ 确认一致，继续
+  "KP" / "Krishnamurti"        → ⚠️ 警告：检测到KP岁差
+  "Raman"                      → ⚠️ 警告：检测到Raman岁差
+  "True Chitrapaksha" / "Pushya" → ⚠️ 提示：非标准Lahiri变体
+  未检测到任何标注              → 记录"未检测到"，不阻塞
+
+检测到非Lahiri时：
+  1. structured_data标注 ⚠️「Ayanamsa风险：检测到[X]，非Lahiri」
+  2. 告知用户："建议使用Lahiri岁差重新导出，否则分析可能存在偏差"
+  3. 用户确认继续 → 标注风险后继续，不强制阻塞
+```
  2. BAV行常量          7b. Lagna Sandhi/Gandanta
  3. 行星完整性(10)     7c. 盈月/亏月判定
  4. 度数唯一性          8. Nakshatra与度数

@@ -1,10 +1,10 @@
 <p align="center">
-  <h1 align="center">🔱 Vedic Astro Skills v6.0</h1>
+  <h1 align="center">🔱 Vedic Astro Skills v6.1</h1>
   <p align="center">
     <strong>AI驱动的吠陀占星分析系统 | AI-Powered Vedic Astrology Analysis System</strong>
   </p>
   <p align="center">
-    <img src="https://img.shields.io/badge/version-v6.0-blue" alt="Version">
+    <img src="https://img.shields.io/badge/version-v6.1-blue" alt="Version">
     <img src="https://img.shields.io/badge/python-3.8~3.13-green" alt="Python">
     <img src="https://img.shields.io/badge/license-MIT-orange" alt="License">
     <img src="https://img.shields.io/badge/skills-6-purple" alt="Skills">
@@ -203,32 +203,48 @@ Chart file (PDF/image/text)      Birth info (date+time+place)
 
 ## 📋 各Skill说明 / Skill Details
 
-### 🧮 vedic-calculator — 原生排盘引擎 / Native Chart Engine
+### 🧮 vedic-calculator — 精确排盘引擎 / Precision Chart Engine
 
-**v6.0 新增。** 给出出生日期、时间、地点，直接计算完整星盘数据。
+**v6.1 升级。** engine.py v0.5 — 基于 PyJHora 精确天文算法，fail-fast 架构。
 
-*New in v6.0.* Given birth date, time, and place, calculates complete chart data natively.
+*Updated in v6.1.* engine.py v0.5 — Built on PyJHora's precise astronomical algorithms, fail-fast architecture.
+
+**计算架构 / Calculation Architecture:**
+
+| 模块 Module | 算法来源 Algorithm Source | 说明 Notes |
+|:---|:---|:---|
+| 行星位置 Positions | pysweph (Swiss Ephemeris) | 天文核心，精度 < 0.01° |
+| SAV / BAV | PyJHora 原生 | 12/12 星座完美匹配 JHora |
+| Vimsottari Dasha | PyJHora 原生 (`dasha_pyjhora.py`) | ≤2 天偏差（含 1 个 0 天完美匹配）|
+| 分盘 Divisional | PyJHora 原生 | 15 张分盘 (D1~D60) |
+| Shadbala 六力 | PyJHora + **9 项 bug 修正** (`shadbala_pyjhora.py`) | 修正 Sthana/Kaala/Dig 等子项 |
+| Dignity / Jaimini | dashaflow | 查表逻辑，无需修正 |
+| Bhava Bala / Lagnas | PyJHora 原生 | 宫位力量 + 特殊 Lagna |
+
+> ⚠️ **为什么 Shadbala 需要修正？** PyJHora 的 SAV/Dasha/分盘模块是正确的，但 Shadbala 的 3 个子项（Sthana/Kaala/Dig）有算法 bug（如 Hora chart method 硬编码错误、Dig Bala 基准点错误等）。`shadbala_pyjhora.py` 在 PyJHora 基础上修正了 9 个子项，使 7 星 rupas 与 JHora 桌面版偏差 < 0.1。
+>
+> **Why does Shadbala need fixes?** PyJHora's SAV/Dasha/divisional modules are correct, but Shadbala has algorithm bugs in 3 sub-components. `shadbala_pyjhora.py` applies 9 targeted fixes on top of PyJHora's internal functions.
 
 **计算项 / Outputs:**
 - 行星位置（经度、星座、Nakshatra）/ Planet positions
-- Vimsottari Dasha（大运 + 小运）/ Dasha periods
+- Vimsottari Dasha（大运 + 小运，≤2天精度）/ Dasha periods (≤2 day accuracy)
 - Chara Karakas（8K）/ Jaimini Karakas
-- D9 / D10 / D4 / D5 分盘 / Divisional charts
-- Shadbala 六力（含9项修正）/ Six strengths (9 fixes)
+- 15 张分盘 (D1~D60) / 15 divisional charts
+- Shadbala 六力（含 9 项修正 + Ishta/Kashta Phala）/ Six strengths (9 fixes)
 - SAV / BAV 吉凶值 / Ashtakavarga
 - 尊贵度（Compound Relationship）/ Dignity
 - 相位、宫主表 / Aspects, house lords
 
-**精度验证 / Accuracy (tested against JHora):**
+**精度验证 / Accuracy (tested against JHora, 2 charts):**
 
 | 项目 Item | 结果 Result |
 |:---|:---|
 | 行星位置 Positions | ✅ 100% 一致 |
 | Karakas | ✅ 8/8 |
 | D9 Navamsa | ✅ 10/10 |
-| Dasha 大运+小运 | ✅ 100% 一致 |
-| Shadbala 排序 | ✅ 7/7（平均偏差 0.07~0.11 rupas）|
-| SAV 总计 | ✅ 337 |
+| Dasha Antardasha | ✅ 9/9 ≤2 天偏差（含 0 天完美匹配）|
+| Shadbala Rupas | ✅ 7/7 偏差 < 0.1 rupas (总误差 0.52) |
+| SAV 总计 | ✅ 337 (5 星盘验证，3 次重复一致) |
 
 ---
 
@@ -284,14 +300,16 @@ vedic-astro-skills/
 │   │   ├── SKILL.md                 # 排盘引擎指令
 │   │   ├── requirements.txt         # Python 依赖
 │   │   └── scripts/
-│   │       ├── engine.py            # 主计算引擎
-│   │       ├── setup_env.py         # 环境自动搭建脚本 (NEW)
+│   │       ├── engine.py            # 主计算引擎 v0.5 (fail-fast)
+│   │       ├── setup_env.py         # 环境自动搭建 (10依赖+SAV校验)
 │   │       ├── formatter.py         # structured_data 输出
 │   │       ├── transit.py           # 过运计算
-│   │       ├── shadbala_pyjhora.py  # Shadbala 修正层
+│   │       ├── dasha_pyjhora.py     # Dasha 精确包装 (≤2天)
+│   │       ├── shadbala_pyjhora.py  # Shadbala 修正层 (9项fix)
 │   │       ├── divisional_pyjhora.py
 │   │       ├── ashtakavarga_pyjhora.py
-│   │       └── extras_pyjhora.py
+│   │       ├── extras_pyjhora.py
+│   │       └── ephe/                # 星历数据 .se1 (bundled)
 │   ├── vedic-reader/
 │   │   ├── SKILL.md                 # 读盘引擎
 │   │   └── resources/
@@ -320,12 +338,15 @@ vedic-astro-skills/
 | 项目 Item | 说明 Details |
 |:---|:---|
 | **流派 School** | KN Rao 体系 (Parashari)，Jaimini 辅助 |
-| **Ayanamsa** | Lahiri (默认 / default) |
-| **天文引擎 Ephemeris** | Swiss Ephemeris via pysweph |
-| **分盘 Divisions** | D1 / D9 / D10 / D4 / D5 |
+| **Ayanamsa** | TRUE_CITRA / Lahiri |
+| **天文核心 Ephemeris** | Swiss Ephemeris via pysweph |
+| **精确算法 Algorithms** | PyJHora 4.8.6 (SAV/Dasha/分盘) + 9项Shadbala修正 |
+| **分盘 Divisions** | 15 张分盘 D1~D60 (PyJHora) |
+| **容错策略 Error Handling** | Fail-fast（不给错误结果）+ `setup_env.py` 自动修复 |
 | **校验 Validation** | 16条数学校验（SAV=337、BAV行和常量、Ra-Ke对冲等）|
 | **反偏见 Anti-bias** | 正反双审 — 禁止只挑用户想听的数据 |
 | **执行引擎 Execution** | 三阶段独立思考链（防超长思考崩溃）|
+| **跨平台 Cross-platform** | Windows / macOS / Linux，Python 3.8~3.13 |
 
 ---
 
@@ -333,7 +354,8 @@ vedic-astro-skills/
 
 | 版本 | 日期 | 亮点 |
 |:---|:---|:---|
-| **v6.0** | 2026-06-07 | 🧮 **vedic-calculator 上线** — 原生排盘引擎 + 移植性改造 + 全系统接入 |
+| **v6.1** | 2026-06-08 | 🎯 **PyJHora 精确引擎** — Dasha ≤2天 + Shadbala 9项fix + fail-fast + 无fallback |
+| v6.0 | 2026-06-07 | 🧮 vedic-calculator 上线 — 原生排盘引擎 + 移植性改造 + 全系统接入 |
 | v5.0 | 2026-05-22 | 三阶段执行引擎 + 动态报告打包 |
 | v4.0 | 2026-05-10 | 双通道OCR + 时间精度联动 + Rectifier |
 | v3.0 | 2026-05-06 | 五Skill架构确立 + 正反双审 |

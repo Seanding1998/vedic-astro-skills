@@ -1,7 +1,10 @@
 """
-vedic-calculator v0.3 - 完整原型
+vedic-calculator v0.4 - 完整原型
 基于pysweph + dashaflow算法模块
 输出完整的structured_data所需数据
+
+v0.4: Dasha 计算接入 PyJHora（偏差 ≤2天），fallback 自建算法（6~9天）
+v0.3: SAV/Shadbala fallback 显式 WARNING
 """
 import swisseph as swe
 from datetime import datetime, timedelta
@@ -41,6 +44,10 @@ except ImportError:
     _bhava_bala_pyjhora = None
     _special_lagnas_pyjhora = None
     _vargeeya_bala_pyjhora = None
+try:
+    from dasha_pyjhora import calculate_dasha_fixed as _dasha_pyjhora
+except ImportError:
+    _dasha_pyjhora = None
 
 # === 配置 ===
 swe.set_sid_mode(swe.SIDM_LAHIRI)
@@ -628,8 +635,18 @@ def calculate_full_chart(year, month, day, hour, minute, lat, lon, tz_str="Asia/
         if planet in planets:
             info['lord_house'] = planets[planet]['house']
     
-    # 11. Vimsottari Dasha
-    dashas = calc_vimsottari_dasha(planets['Moon']['longitude'], year, month, day, hour, minute)
+    # 11. Vimsottari Dasha (PyJHora preferred, self-built fallback)
+    dashas = None
+    if _dasha_pyjhora is not None:
+        try:
+            tz = pytz.timezone(tz_str)
+            _tz_dt = tz.localize(datetime(year, month, day, hour, minute))
+            _tz_off = _tz_dt.utcoffset().total_seconds() / 3600
+            dashas = _dasha_pyjhora(year, month, day, hour, minute, lat, lon, _tz_off)
+        except Exception as e:
+            print(f"⚠️ PyJHora Dasha failed ({e}), using self-built fallback", file=sys.stderr)
+    if dashas is None:
+        dashas = calc_vimsottari_dasha(planets['Moon']['longitude'], year, month, day, hour, minute)
     
     # 12. Shadbala (via PyJHora fixed wrapper, dashaflow fallback)
     shadbala_data = None

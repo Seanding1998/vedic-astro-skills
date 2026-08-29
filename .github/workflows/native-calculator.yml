@@ -1,0 +1,42 @@
+name: Native calculator validation
+
+on:
+  push:
+    paths:
+      - "scripts/vedic_native_calculator.py"
+      - "scripts/chart_sanity_check.py"
+      - "tests/test_native_calculator.py"
+      - ".github/workflows/native-calculator.yml"
+  pull_request:
+    paths:
+      - "scripts/vedic_native_calculator.py"
+      - "scripts/chart_sanity_check.py"
+      - "tests/test_native_calculator.py"
+      - ".github/workflows/native-calculator.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: SAV/BAV regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install calculator dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pysweph pytz PyJHora==4.8.6
+      - name: Compile calculator modules
+        run: python -m py_compile scripts/vedic_native_calculator.py scripts/chart_sanity_check.py scripts/jhora_markdown_bridge.py
+      - name: Run direct SAV/BAV regression
+        run: python -m unittest discover -s tests -p "test_native_calculator.py" -v
+      - name: Verify the generated JSON through the shared sanity checker
+        run: |
+          mkdir -p .tmp
+          python scripts/vedic_native_calculator.py --date 1869-10-02 --time 07:31 --lat 21.6417 --lon 69.6293 --tz Asia/Kolkata --place Porbandar --output .tmp/native.md --json-output .tmp/native.json --require-ashtakavarga
+          python scripts/chart_sanity_check.py .tmp/native.json

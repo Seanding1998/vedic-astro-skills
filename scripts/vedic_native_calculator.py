@@ -309,34 +309,29 @@ def calc_special_points(house_lords: dict[int, dict[str, Any]], lagna_sign_idx: 
     return result
 
 
-def patch_swe_for_pyjhora() -> None:
-    """Adapt the current pysweph result arity to PyJHora 4.8.6."""
-    def patch_calculator(original: Any) -> Any:
-        def wrapper(jd: float, planet: int, flags: int = 0) -> Any:
-            result = original(jd, planet, flags=flags)
-            return (result[0], result[1]) if isinstance(result, tuple) and len(result) == 3 else result
+def patch_pyjhora_sidereal_longitude(drik: Any, const: Any, utils: Any) -> None:
+    """Teach PyJHora 4.8.6 to read the current pysweph position result shape."""
+    original = getattr(drik, "sidereal_longitude", None)
+    if original is None or getattr(original, "_seanding_shape_patch", False):
+        return
 
-        wrapper._seanding_shape_patch = True  # type: ignore[attr-defined]
-        return wrapper
+    def sidereal_longitude(jd_ut: float, planet: int) -> float:
+        if bool(getattr(const, "_TROPICAL_MODE", False)):
+            flags = swe.FLG_SWIEPH | swe.FLG_SPEED
+        else:
+            flags = drik.PLANET_FLAGS
+        node_id = getattr(const, "_RAHU", getattr(const, "RAHU_ID", swe.MEAN_NODE))
+        ketu_id = getattr(const, "_KETU", getattr(const, "KETU_ID", 8))
+        raw = swe.calc_ut(jd_ut, node_id if planet == ketu_id else planet, flags=flags)
+        longitude = float(raw[0][0]) % 360.0
+        if planet == ketu_id:
+            longitude = (longitude + 180.0) % 360.0
+        return float(utils.norm360(longitude))
 
-    for attr in ("calc_ut", "calc"):
-        original = getattr(swe, attr, None)
-        if original is not None and not getattr(original, "_seanding_shape_patch", False):
-            setattr(swe, attr, patch_calculator(original))
-
-    original_houses = getattr(swe, "houses_ex", None)
-    if original_houses is not None and not getattr(original_houses, "_seanding_shape_patch", False):
-        def houses_wrapper(*args: Any, **kwargs: Any) -> Any:
-            result = original_houses(*args, **kwargs)
-            return (result[0], result[1]) if isinstance(result, tuple) and len(result) == 3 else result
-
-        houses_wrapper._seanding_shape_patch = True  # type: ignore[attr-defined]
-        swe.houses_ex = houses_wrapper
+    sidereal_longitude._seanding_shape_patch = True  # type: ignore[attr-defined]
+    drik.sidereal_longitude = sidereal_longitude
 
 def configure_pyjhora() -> tuple[Any, Any, Any]:
-    # PyJHora 4.8.6 expects a two-item Swiss Ephemeris result while current
-    # pysweph exposes three items. The adapter is idempotent and local to this process.
-    patch_swe_for_pyjhora()
     import jhora
     from jhora import const
     from jhora.horoscope.chart import ashtakavarga, charts
@@ -344,6 +339,7 @@ def configure_pyjhora() -> tuple[Any, Any, Any]:
     from jhora.panchanga import drik
     from jhora.panchanga.drik import Date, Place
 
+    patch_pyjhora_sidereal_longitude(drik, const, utils)
     ephe_dir = Path(jhora.__file__).resolve().parent / "data" / "ephe"
     if ephe_dir.exists():
         swe.set_ephe_path(str(ephe_dir))

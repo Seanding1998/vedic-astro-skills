@@ -338,8 +338,9 @@ def configure_pyjhora() -> tuple[Any, Any, Any]:
     import jhora
     from jhora import const
     from jhora.horoscope.chart import ashtakavarga, charts
+    from jhora import utils
     from jhora.panchanga import drik
-    from jhora.panchanga.drik import Place
+    from jhora.panchanga.drik import Date, Place
 
     ephe_dir = Path(jhora.__file__).resolve().parent / "data" / "ephe"
     if ephe_dir.exists():
@@ -352,13 +353,23 @@ def configure_pyjhora() -> tuple[Any, Any, Any]:
         const._DEFAULT_AYANAMSA_MODE = "TRUE_CITRA"
     if hasattr(const, "_use_true_nodes_for_rahu_ketu"):
         const._use_true_nodes_for_rahu_ketu = False
-    return Place, charts, ashtakavarga
+    return Date, Place, charts, ashtakavarga, utils
+
+
+def pyjhora_julian_day(birth: BirthInput, Date: Any, utils: Any) -> float:
+    """Build the JD through PyJHora's public Date/time API, not a private conversion."""
+    return float(
+        utils.julian_day_number(
+            Date(birth.year, birth.month, birth.day),
+            (birth.hour, birth.minute, 0),
+        )
+    )
 
 
 def pyjhora_ashtakavarga(birth: BirthInput, tz_offset: float) -> dict[str, Any]:
-    Place, charts, ashtakavarga = configure_pyjhora()
+    Date, Place, charts, ashtakavarga, utils = configure_pyjhora()
     place = Place(birth.place or "birth_place", birth.lat, birth.lon, tz_offset)
-    rasi = charts.rasi_chart(julian_day_local(birth), place)
+    rasi = charts.rasi_chart(pyjhora_julian_day(birth, Date, utils), place)
     h2p_slots: list[list[str]] = [[] for _ in range(12)]
     for item in rasi:
         if not isinstance(item, (tuple, list)) or len(item) < 2:
@@ -389,9 +400,9 @@ def normalize_pyjhora_body_id(raw: Any) -> str | None:
 
 
 def pyjhora_divisional_charts(birth: BirthInput, tz_offset: float, factors: tuple[int, ...] = (9, 10, 4, 5)) -> dict[str, Any]:
-    Place, charts, _ashtakavarga = configure_pyjhora()
+    Date, Place, charts, _ashtakavarga, utils = configure_pyjhora()
     place = Place(birth.place or "birth_place", birth.lat, birth.lon, tz_offset)
-    jd = julian_day_local(birth)
+    jd = pyjhora_julian_day(birth, Date, utils)
     result: dict[str, Any] = {}
     for factor in factors:
         rows = charts.divisional_chart(jd, place, divisional_chart_factor=factor, chart_method=1)

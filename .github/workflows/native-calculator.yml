@@ -44,6 +44,9 @@ jobs:
           jd = pyjhora_julian_day(birth, Date, utils)
           print(f"PyJHora local JD={jd:.6f}")
           assert 2_000_000 < jd < 3_000_000, jd
+          import inspect
+          from jhora.panchanga import drik
+          print(inspect.getsource(drik.dhasavarga))
           PY
       - name: Run direct SAV/BAV regression
         run: python -m unittest discover -s tests -p "test_native_calculator.py" -v

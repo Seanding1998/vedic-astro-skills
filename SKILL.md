@@ -163,6 +163,10 @@ description: 吠陀命盘分析中文入口。用于完整命盘研判、命主�
 ```
 用户的问题 … → 你自动匹配 →
 
+用户直接给出出生日期、当地时间、经纬度和 IANA 时区，并要求“排盘”“直接计算”或没有 JHora 导出：
+  → 先加载 references/calculator.md，安装 requirements-native-calculator.txt，运行 scripts/vedic_native_calculator.py --require-ashtakavarga
+  → 再按问题重心加载总盘、事业、婚姻或窗口与场域 reference；不把未通过校验的 SAV/BAV 用于结论
+
 问题涉及"整张盘""全面分析""命盘研判""人生总览""我是什么样的人"：
   → 加载 references/总盘.md + references/术语框架.md
   → 告知用户："我先完整看一遍你的全盘结构，然后拆开说。"
@@ -201,6 +205,7 @@ description: 吠陀命盘分析中文入口。用于完整命盘研判、命主�
 | 婚姻/感情 | `references/婚姻.md` | 关系模式、伴侣结构、时间窗口、风险与提醒 |
 | 时间+地点 | `references/窗口与场域.md` | 地点差异、迁移判断、时间窗口缩小、场域联合分析 |
 | 术语/框架 | `references/术语框架.md` | 八镜框架、校验规则、冲突裁定、术语定义 |
+| 出生信息直算、直接排盘 | `references/calculator.md` | 原生 D1、SAV/BAV、机器可校验 JSON；之后再按问题加载专题 reference |
 | 包装 HTML | `scripts/build_report_html.py` | MD sections → 单文件自包含 HTML |
 
 不要一次性载入全部 reference。先判断问题重心，再只读最相关的一组。
@@ -237,6 +242,15 @@ python "scripts/chart_sanity_check.py" <chart-input.json-or-jhora.md>
 这个脚本现在可以直接读取 JHora 导出的 markdown，不必先手工改写成 JSON。
 
 当前版本对 JHora 的紧凑 Ashtakavarga 已支持 `3×3` 小方块边框精确解析：命中标准导出时，`SAV=337`、7 星 `BAV` 行常量、`BAV -> SAV` 列和会直接结构化进入 payload，而不是依赖 LLM 手动读表做算术。
+
+当用户提供完整出生信息但没有 JHora 导出时，先安装 `requirements-native-calculator.txt`，再运行：
+
+```bash
+python "scripts/vedic_native_calculator.py" --date YYYY-MM-DD --time HH:MM --lat LAT --lon LON --tz IANA_TIMEZONE --require-ashtakavarga --json-output structured_data_native.json
+python "scripts/chart_sanity_check.py" structured_data_native.json
+```
+
+原生路径只有在 SAV 总和、BAV 行常量、BAV→SAV 列和全部通过时，才允许使用 SAV/BAV 数值结论；若用户已有 JHora 数据，仍保留 JHora markdown 解析作为优先交叉来源。
 
 **SAV/BAV 矩阵是必须尝试的项目，不是可选加分项**：
 

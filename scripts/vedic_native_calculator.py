@@ -310,28 +310,28 @@ def calc_special_points(house_lords: dict[int, dict[str, Any]], lagna_sign_idx: 
 
 
 def patch_swe_for_pyjhora() -> None:
-    for attr in ("calc_ut", "calc"):
-        original = getattr(swe, attr, None)
-        if original is None or getattr(original, "_seanding_shape_patch", False):
-            continue
-
-        def wrapper(jd: float, planet: int, flags: int = 0, _original=original):
-            result = _original(jd, planet, flags=flags)
+    """Adapt the current pysweph result arity to PyJHora 4.8.6."""
+    def patch_calculator(original: Any) -> Any:
+        def wrapper(jd: float, planet: int, flags: int = 0) -> Any:
+            result = original(jd, planet, flags=flags)
             return (result[0], result[1]) if isinstance(result, tuple) and len(result) == 3 else result
 
         wrapper._seanding_shape_patch = True  # type: ignore[attr-defined]
-        setattr(swe, attr, wrapper)
+        return wrapper
+
+    for attr in ("calc_ut", "calc"):
+        original = getattr(swe, attr, None)
+        if original is not None and not getattr(original, "_seanding_shape_patch", False):
+            setattr(swe, attr, patch_calculator(original))
 
     original_houses = getattr(swe, "houses_ex", None)
     if original_houses is not None and not getattr(original_houses, "_seanding_shape_patch", False):
-
-        def houses_wrapper(*args: Any, **kwargs: Any):
+        def houses_wrapper(*args: Any, **kwargs: Any) -> Any:
             result = original_houses(*args, **kwargs)
             return (result[0], result[1]) if isinstance(result, tuple) and len(result) == 3 else result
 
         houses_wrapper._seanding_shape_patch = True  # type: ignore[attr-defined]
         swe.houses_ex = houses_wrapper
-
 
 def configure_pyjhora() -> tuple[Any, Any, Any]:
     # PyJHora 4.8.6 expects a two-item Swiss Ephemeris result while current

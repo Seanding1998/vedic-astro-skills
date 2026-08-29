@@ -316,7 +316,7 @@ def patch_swe_for_pyjhora() -> None:
             continue
 
         def wrapper(jd: float, planet: int, flags: int = 0, _original=original):
-            result = _original(jd, planet, flags)
+            result = _original(jd, planet, flags=flags)
             return (result[0], result[1]) if isinstance(result, tuple) and len(result) == 3 else result
 
         wrapper._seanding_shape_patch = True  # type: ignore[attr-defined]
@@ -334,8 +334,9 @@ def patch_swe_for_pyjhora() -> None:
 
 
 def configure_pyjhora() -> tuple[Any, Any, Any]:
-    # pysweph>=2.10 returns the two-item result shape PyJHora 4.8.6 expects.
-    # Do not mutate swisseph globals here: this calculator also uses them for D1.
+    # PyJHora 4.8.6 expects a two-item Swiss Ephemeris result while current
+    # pysweph exposes three items. The adapter is idempotent and local to this process.
+    patch_swe_for_pyjhora()
     import jhora
     from jhora import const
     from jhora.horoscope.chart import ashtakavarga, charts

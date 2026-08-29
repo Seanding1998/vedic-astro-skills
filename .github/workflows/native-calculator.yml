@@ -33,6 +33,18 @@ jobs:
           python -m pip install -r requirements-native-calculator.txt
       - name: Compile calculator modules
         run: python -m py_compile scripts/vedic_native_calculator.py scripts/chart_sanity_check.py scripts/jhora_markdown_bridge.py
+      - name: Verify PyJHora calendar bridge
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, "scripts")
+          from vedic_native_calculator import BirthInput, configure_pyjhora, pyjhora_julian_day
+          birth = BirthInput(2002, 12, 11, 20, 47, 25.4333, 119.0, "Asia/Shanghai", "Quanzhou")
+          Date, _Place, _charts, _ashtakavarga, utils = configure_pyjhora()
+          jd = pyjhora_julian_day(birth, Date, utils)
+          print(f"PyJHora local JD={jd:.6f}")
+          assert 2_000_000 < jd < 3_000_000, jd
+          PY
       - name: Run direct SAV/BAV regression
         run: python -m unittest discover -s tests -p "test_native_calculator.py" -v
       - name: Verify the generated JSON through the shared sanity checker

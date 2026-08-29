@@ -5,12 +5,14 @@ on:
     paths:
       - "scripts/vedic_native_calculator.py"
       - "scripts/chart_sanity_check.py"
+      - "requirements-native-calculator.txt"
       - "tests/test_native_calculator.py"
       - ".github/workflows/native-calculator.yml"
   pull_request:
     paths:
       - "scripts/vedic_native_calculator.py"
       - "scripts/chart_sanity_check.py"
+      - "requirements-native-calculator.txt"
       - "tests/test_native_calculator.py"
       - ".github/workflows/native-calculator.yml"
   workflow_dispatch:

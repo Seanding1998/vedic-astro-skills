@@ -211,7 +211,10 @@ def planet_entry(name: str, longitude: float, speed: float, lagna_sign_idx: int)
         "sign": SIGNS[idx], "sign_idx": idx, "degree": degree,
         "deg_str": degree_label(degree), "longitude": longitude % 360.0,
         "house": house_from_lagna(idx, lagna_sign_idx), "retrograde": retrograde,
-        "speed": speed, "nakshatra": nakshatra_for(longitude),
+        "speed": speed,
+        "nakshatra": nakshatra_for(longitude)["name"],
+        "pada": nakshatra_for(longitude)["pada"],
+        "nakshatra_lord": nakshatra_for(longitude)["lord"],
     }
 
 
@@ -545,8 +548,8 @@ def format_markdown(chart: dict[str, Any]) -> str:
 
     nak_rows = [["Lagna", chart["lagna"]["nakshatra"]["name"], chart["lagna"]["nakshatra"]["pada"], chart["lagna"]["nakshatra"]["lord"]]]
     for planet in PLANET_ORDER:
-        n = chart["planets"][planet]["nakshatra"]
-        nak_rows.append([planet, n["name"], n["pada"], n["lord"]])
+        p = chart["planets"][planet]
+        nak_rows.append([planet, p["nakshatra"], p["pada"], p["nakshatra_lord"]])
     lines.append("## Nakshatra")
     lines.extend(markdown_table(["Body", "Nakshatra", "Pada", "Lord"], nak_rows))
     lines.append("")

@@ -1,6 +1,6 @@
 # Runtime dependencies for scripts/vedic_native_calculator.py.
 # PyJHora 4.8.6 omits several import-time dependencies from its package metadata.
-pysweph>=2.10.3.5
+pysweph==2.10.3.5
 pytz>=2024.1
 numpy
 geocoder

@@ -309,28 +309,6 @@ def calc_special_points(house_lords: dict[int, dict[str, Any]], lagna_sign_idx: 
     return result
 
 
-def patch_pyjhora_sidereal_longitude(drik: Any, const: Any, utils: Any) -> None:
-    """Teach PyJHora 4.8.6 to read the current pysweph position result shape."""
-    original = getattr(drik, "sidereal_longitude", None)
-    if original is None or getattr(original, "_seanding_shape_patch", False):
-        return
-
-    def sidereal_longitude(jd_ut: float, planet: int) -> float:
-        if bool(getattr(const, "_TROPICAL_MODE", False)):
-            flags = swe.FLG_SWIEPH | swe.FLG_SPEED
-        else:
-            flags = drik.PLANET_FLAGS
-        node_id = getattr(const, "_RAHU", getattr(const, "RAHU_ID", swe.MEAN_NODE))
-        ketu_id = getattr(const, "_KETU", getattr(const, "KETU_ID", 8))
-        raw = swe.calc_ut(jd_ut, node_id if planet == ketu_id else planet, flags=flags)
-        longitude = float(raw[0][0]) % 360.0
-        if planet == ketu_id:
-            longitude = (longitude + 180.0) % 360.0
-        return float(utils.norm360(longitude))
-
-    sidereal_longitude._seanding_shape_patch = True  # type: ignore[attr-defined]
-    drik.sidereal_longitude = sidereal_longitude
-
 def configure_pyjhora() -> tuple[Any, Any, Any]:
     import jhora
     from jhora import const
@@ -339,7 +317,6 @@ def configure_pyjhora() -> tuple[Any, Any, Any]:
     from jhora.panchanga import drik
     from jhora.panchanga.drik import Date, Place
 
-    patch_pyjhora_sidereal_longitude(drik, const, utils)
     ephe_dir = Path(jhora.__file__).resolve().parent / "data" / "ephe"
     if ephe_dir.exists():
         swe.set_ephe_path(str(ephe_dir))
@@ -364,29 +341,40 @@ def pyjhora_julian_day(birth: BirthInput, Date: Any, utils: Any) -> float:
     )
 
 
-def pyjhora_ashtakavarga(birth: BirthInput, tz_offset: float) -> dict[str, Any]:
-    Date, Place, charts, ashtakavarga, utils = configure_pyjhora()
-    place = Place(birth.place or "birth_place", birth.lat, birth.lon, tz_offset)
-    rasi = charts.rasi_chart(pyjhora_julian_day(birth, Date, utils), place)
+def pyjhora_ashtakavarga(
+    lagna: dict[str, Any], planets: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    """Calculate BAV/SAV from the already-computed D1 sign occupancy.
+
+    PyJHora's Ashtakavarga function accepts a twelve-sign house-to-planet list.
+    Feeding the native D1 avoids a second ephemeris pass and its process-global
+    Swiss Ephemeris compatibility issues.
+    """
+    _Date, _Place, _charts, ashtakavarga, _utils = configure_pyjhora()
+    ids = {
+        "Lagna": "L", "Sun": "0", "Moon": "1", "Mars": "2", "Mercury": "3",
+        "Jupiter": "4", "Venus": "5", "Saturn": "6", "Rahu": "7", "Ketu": "8",
+    }
     h2p_slots: list[list[str]] = [[] for _ in range(12)]
-    for item in rasi:
-        if not isinstance(item, (tuple, list)) or len(item) < 2:
+    h2p_slots[int(lagna["sign_idx"])].append(ids["Lagna"])
+    for planet, token in ids.items():
+        if planet == "Lagna":
             continue
-        pos = item[1]
-        if not isinstance(pos, (tuple, list)) or not pos:
-            continue
-        sign = int(pos[0])
-        if 0 <= sign < 12:
-            h2p_slots[sign].append(str(item[0]))
+        h2p_slots[int(planets[planet]["sign_idx"])].append(token)
     h2p = ["/".join(slot) for slot in h2p_slots]
+
     bav_raw, sav_raw, _prastara = ashtakavarga.get_ashtaka_varga(h2p)
     sav = {sign: int(round(float(sav_raw[idx]))) for idx, sign in enumerate(SIGNS)}
     bav: dict[str, dict[str, int]] = {}
     for row_idx, planet in enumerate(BAV_ROW_CONSTANTS):
         row = bav_raw[row_idx]
         bav[planet] = {sign: int(round(float(row[idx]))) for idx, sign in enumerate(SIGNS)}
-    return {"sarvashtakavarga": sav, "bhinnashtakavarga": bav, "sav_total": sum(sav.values()), "source": "PyJHora"}
-
+    return {
+        "sarvashtakavarga": sav,
+        "bhinnashtakavarga": bav,
+        "sav_total": sum(sav.values()),
+        "source": "PyJHora",
+    }
 
 def normalize_pyjhora_body_id(raw: Any) -> str | None:
     key = str(raw).strip()
@@ -463,7 +451,7 @@ def calculate_chart(birth: BirthInput, *, require_ashtakavarga: bool = False) ->
     sav: dict[str, int] = {}
     bav: dict[str, dict[str, int]] = {}
     try:
-        av = pyjhora_ashtakavarga(birth, tz_offset)
+        av = pyjhora_ashtakavarga(lagna, planets)
         sav = av["sarvashtakavarga"]
         bav = av["bhinnashtakavarga"]
         ashtakavarga_status = {"ok": True, "source": av.get("source"), "error": None}

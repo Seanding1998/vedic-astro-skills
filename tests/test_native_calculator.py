@@ -13,18 +13,18 @@ from vedic_native_calculator import BAV_ROW_CONSTANTS, BirthInput, PLANET_ORDER,
 
 
 class NativeCalculatorRegressionTests(unittest.TestCase):
-    # This is an established public historical chart used only as a reproducible
-    # date/time/place input. SAV/BAV invariants must be independent of interpretation.
+    # Reproducible birth input used for numerical SAV/BAV regression only.
+    # Interpretive claims are deliberately outside the scope of this test.
     BIRTH = BirthInput(
-        year=1869,
-        month=10,
-        day=2,
-        hour=7,
-        minute=31,
-        lat=21.6417,
-        lon=69.6293,
-        tz="Asia/Kolkata",
-        place="Porbandar",
+        year=2002,
+        month=12,
+        day=11,
+        hour=20,
+        minute=47,
+        lat=25.4333,
+        lon=119.0,
+        tz="Asia/Shanghai",
+        place="Quanzhou",
     )
 
     @classmethod

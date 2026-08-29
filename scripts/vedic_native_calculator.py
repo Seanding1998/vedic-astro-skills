@@ -334,7 +334,8 @@ def patch_swe_for_pyjhora() -> None:
 
 
 def configure_pyjhora() -> tuple[Any, Any, Any]:
-    patch_swe_for_pyjhora()
+    # pysweph>=2.10 returns the two-item result shape PyJHora 4.8.6 expects.
+    # Do not mutate swisseph globals here: this calculator also uses them for D1.
     import jhora
     from jhora import const
     from jhora.horoscope.chart import ashtakavarga, charts

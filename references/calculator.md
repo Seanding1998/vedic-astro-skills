@@ -11,6 +11,16 @@
 - 出生地经纬度：`lat/lon`
 - IANA 时区：例如 `Asia/Shanghai`、`Asia/Taipei`、`Asia/Kolkata`
 
+## 安装
+
+在项目根目录安装锁定的运行时依赖：
+
+```bash
+python -m pip install -r requirements-native-calculator.txt
+```
+
+`PyJHora==4.8.6` 的发布元数据遗漏了若干导入时依赖；不要只安装 `PyJHora`，必须使用这份 requirements 文件。
+
 示例：
 
 ```bash
@@ -44,7 +54,7 @@ python "scripts/chart_sanity_check.py" structured_data_native.json
 - 7K 主用 Chara Karakas 与 8K 参考
 - Parashari Graha Drishti：宫位照射，不使用西占 orb 相位
 - AL/UL：按 Arudha 规则计算
-- SAV/BAV：如果本机安装 PyJHora，则通过 PyJHora Ashtakavarga API 计算并校验
+- SAV/BAV：原生 D1 按 True Citra + Mean Node 计算星座落点，再输入 PyJHora Ashtakavarga API；强制校验 SAV=337、BAV 行常量和 BAV→SAV 列和
 - D9/D10/D4/D5：如果本机安装 PyJHora，则尝试通过 PyJHora 分盘 API 计算
 
 ## 硬约束

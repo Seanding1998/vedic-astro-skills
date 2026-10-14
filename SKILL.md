@@ -223,7 +223,7 @@ description: 吠陀命盘分析中文入口。用于完整命盘研判、命主�
 | 婚姻/感情 | `references/婚姻.md` | 关系模式、伴侣结构、时间窗口、风险与提醒 |
 | 时间+地点 | `references/窗口与场域.md` | 地点差异、迁移判断、时间窗口缩小、场域联合分析 |
 | 术语/框架 | `references/术语框架.md` | 八镜框架、校验规则、冲突裁定、术语定义 |
-| 出生信息直算、直接排盘 | `references/calculator.md` | 原生 D1、SAV/BAV、机器可校验 JSON；之后再按问题加载专题 reference |
+| 出生信息直算、直接排盘 | `references/calculator.md` | 原生 D1、南印度式 SVG 盘面、SAV/BAV、机器可校验 JSON；之后再按问题加载专题 reference |
 | 交付前的个人化结论、数值结论或报告 | `references/审查与断后校验.md` | 两阶段、干净上下文审查代理的 fail-closed PASS/REVISE 协议 |
 | 包装 HTML | `scripts/build_report_html.py` | MD sections → 单文件自包含 HTML |
 
@@ -265,7 +265,7 @@ python "scripts/chart_sanity_check.py" <chart-input.json-or-jhora.md>
 当用户提供完整出生信息但没有 JHora 导出时，先安装 `requirements-native-calculator.txt`，再运行：
 
 ```bash
-python "scripts/vedic_native_calculator.py" --date YYYY-MM-DD --time HH:MM --lat LAT --lon LON --tz IANA_TIMEZONE --require-ashtakavarga --json-output structured_data_native.json
+python "scripts/vedic_native_calculator.py" --date YYYY-MM-DD --time HH:MM --lat LAT --lon LON --tz IANA_TIMEZONE --require-ashtakavarga --json-output structured_data_native.json --chart-svg-output vedic_chart_d1.svg
 python "scripts/chart_sanity_check.py" structured_data_native.json
 ```
 

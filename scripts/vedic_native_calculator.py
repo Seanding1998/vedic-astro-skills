@@ -20,13 +20,16 @@ Not implemented here on purpose:
   exports until a separate formula-level clean-room implementation is written.
 - Full MD/AD/PD Vimsottari. Do not use this script for month/day-level dasha
   timing until a separately tested dasha module is added.
+- North Indian chart drawing and divisional chart graphics.
 """
 
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import math
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -534,6 +537,11 @@ def format_markdown(chart: dict[str, Any]) -> str:
     lines.append(f"计算器: {meta['calculator']}")
     lines.append("```")
     lines.append("")
+    if chart.get("graphic_chart", {}).get("output"):
+        svg_name = html.escape(chart["graphic_chart"].get("markdown_link", Path(chart["graphic_chart"]["output"]).name), quote=True)
+        lines.append(f"## D1 图形盘面（南印度式）")
+        lines.append(f"![南印度式 D1 Rāśi 盘面]({svg_name})")
+        lines.append("")
 
     rows = [["Lagna", chart["lagna"]["sign"], 1, chart["lagna"]["deg_str"], "-"]]
     for planet in PLANET_ORDER:
@@ -596,6 +604,74 @@ def format_markdown(chart: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def format_south_indian_svg(chart: dict[str, Any]) -> str:
+    """用原生 SVG 绘制南印度式 D1 星盘，不依赖额外绘图库。"""
+    # 南印度式盘固定星座位置；白羊座从左上方第二格开始顺时针排列。
+    width = 760
+    margin = 24
+    cell = (width - margin * 2) / 4
+    positions = {
+        0: (1, 0), 1: (2, 0), 2: (3, 0), 3: (3, 1),
+        4: (3, 2), 5: (3, 3), 6: (2, 3), 7: (1, 3),
+        8: (0, 3), 9: (0, 2), 10: (0, 1), 11: (0, 0),
+    }
+    sign_zh = ["白羊", "金牛", "双子", "巨蟹", "狮子", "处女", "天秤", "天蝎", "射手", "摩羯", "水瓶", "双鱼"]
+    body_zh = {
+        "Lagna": "上升", "Sun": "日", "Moon": "月", "Mars": "火",
+        "Mercury": "水", "Jupiter": "木", "Venus": "金", "Saturn": "土",
+        "Rahu": "罗喉", "Ketu": "计都",
+    }
+    placements: dict[int, list[str]] = {idx: [] for idx in range(12)}
+    placements[int(chart["lagna"]["sign_idx"])].append("上升 " + chart["lagna"]["deg_str"])
+    for name in PLANET_ORDER:
+        body = chart["planets"][name]
+        label = f"{body_zh[name]} {body['deg_str']}"
+        if body.get("retrograde") and name not in {"Rahu", "Ketu"}:
+            label += " ℞"
+        placements[int(body["sign_idx"])].append(label)
+
+    # 只绘制外圈 12 个星座格和中间说明框，中心不画穿越格线。
+    parts = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" '
+        f'width="{width}" height="{width}" viewBox="0 0 {width} {width}">',
+        '<title id="title">南印度式 D1 星盘</title>',
+        '<desc id="desc">依据出生信息计算的十二星座与行星落点图</desc>',
+        '<rect width="100%" height="100%" fill="#fffdf8"/>',
+        '<style>text{font-family:"Noto Sans CJK SC","Microsoft YaHei",sans-serif;fill:#27231f}'
+        '.sign{font-size:15px;font-weight:700}.body{font-size:14px}.center{font-size:17px;font-weight:700}'
+        '.sub{font-size:12px;fill:#665e54}</style>',
+    ]
+    for sign_idx, (col, row) in positions.items():
+        x = margin + col * cell
+        y = margin + row * cell
+        highlighted = sign_idx == int(chart["lagna"]["sign_idx"])
+        fill = "#f6e8cf" if highlighted else "#fffdf8"
+        parts.append(
+            f'<rect x="{x:.1f}" y="{y:.1f}" width="{cell:.1f}" height="{cell:.1f}" '
+            f'fill="{fill}" stroke="#76644d" stroke-width="1.5"/>'
+        )
+        parts.append(f'<text class="sign" x="{x + 10:.1f}" y="{y + 24:.1f}">{sign_zh[sign_idx]}（{sign_idx + 1}）</text>')
+        for line_idx, label in enumerate(placements[sign_idx]):
+            safe_label = html.escape(label, quote=True)
+            parts.append(f'<text class="body" x="{x + 10:.1f}" y="{y + 49 + line_idx * 20:.1f}">{safe_label}</text>')
+
+    center_x = margin + cell
+    center_y = margin + cell
+    parts.append(
+        f'<rect x="{center_x:.1f}" y="{center_y:.1f}" width="{cell * 2:.1f}" height="{cell * 2:.1f}" '
+        'fill="#f4f0e8" stroke="#76644d" stroke-width="1.5"/>'
+    )
+    parts.append(f'<text class="center" text-anchor="middle" x="{width / 2}" y="{width / 2 - 18}">D1 Rāśi</text>')
+    meta = chart["metadata"]
+    birth_text = html.escape(f"{meta['birth_date']} {meta['birth_time']} · {meta['place']}", quote=True)
+    parts.append(f'<text class="sub" text-anchor="middle" x="{width / 2}" y="{width / 2 + 10}">{birth_text}</text>')
+    ayanamsa = html.escape(f"Ayanāṃśa {chart['ayanamsa']:.4f}° · {meta['ayanamsa_mode']}", quote=True)
+    parts.append(f'<text class="sub" text-anchor="middle" x="{width / 2}" y="{width / 2 + 33}">{ayanamsa}</text>')
+    parts.append('</svg>')
+    return "\n".join(parts) + "\n"
+
+
 def parse_birth_args(args: argparse.Namespace) -> BirthInput:
     try:
         year, month, day = [int(part) for part in args.date.split("-")]
@@ -624,6 +700,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--time-source", default="unspecified")
     parser.add_argument("--output", default="structured_data_native.md", help="Markdown output path")
     parser.add_argument("--json-output", default="structured_data_native.json", help="JSON output path")
+    parser.add_argument("--chart-svg-output", default="vedic_chart_d1.svg", help="South Indian D1 chart SVG output path")
     parser.add_argument("--require-ashtakavarga", action="store_true", help="Fail if PyJHora SAV/BAV cannot be calculated")
     return parser
 
@@ -632,10 +709,19 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     chart = calculate_chart(parse_birth_args(args), require_ashtakavarga=args.require_ashtakavarga)
+    svg_path = Path(args.chart_svg_output)
+    markdown_path = Path(args.output)
+    markdown_link = os.path.relpath(svg_path.resolve(), markdown_path.resolve().parent).replace("\\", "/")
+    chart["graphic_chart"] = {
+        "style": "South Indian", "format": "SVG", "output": args.chart_svg_output,
+        "markdown_link": markdown_link,
+    }
+    Path(args.chart_svg_output).write_text(format_south_indian_svg(chart), encoding="utf-8")
     Path(args.output).write_text(format_markdown(chart), encoding="utf-8")
     if args.json_output:
         Path(args.json_output).write_text(json.dumps(chart, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
     print(f"Wrote {args.output}")
+    print(f"Wrote {args.chart_svg_output}")
     if args.json_output:
         print(f"Wrote {args.json_output}")
     sav_check = chart["validation"].get("sav_total")

@@ -9,7 +9,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from vedic_native_calculator import BAV_ROW_CONSTANTS, BirthInput, PLANET_ORDER, SIGNS, calculate_chart
+from vedic_native_calculator import (
+    BAV_ROW_CONSTANTS,
+    BirthInput,
+    PLANET_ORDER,
+    SIGNS,
+    calculate_chart,
+    format_south_indian_svg,
+)
 
 
 class NativeCalculatorRegressionTests(unittest.TestCase):
@@ -58,6 +65,27 @@ class NativeCalculatorRegressionTests(unittest.TestCase):
             self.assertIsInstance(row["nakshatra"], str)
             self.assertIn(row["pada"], {1, 2, 3, 4})
             self.assertIsInstance(row["nakshatra_lord"], str)
+
+    def test_south_indian_svg_contains_twelve_signs_and_all_grahas(self) -> None:
+        # 使用最小结构化样本，单独验证图形模板，不重复执行天文计算。
+        chart = {
+            "metadata": {
+                "birth_date": "2002-12-11", "birth_time": "20:47",
+                "place": "Quanzhou", "ayanamsa_mode": "TRUE_CITRA",
+            },
+            "ayanamsa": 23.9,
+            "lagna": {"sign_idx": 0, "deg_str": "05deg12'"},
+            "planets": {
+                name: {"sign_idx": idx, "deg_str": "10deg20'", "retrograde": False}
+                for idx, name in enumerate(PLANET_ORDER)
+            },
+        }
+        svg = format_south_indian_svg(chart)
+        self.assertEqual(svg.count("<rect x=\""), 13)
+        self.assertIn("南印度式 D1 星盘", svg)
+        self.assertIn("白羊（1）", svg)
+        for body in ("日", "月", "火", "水", "木", "金", "土", "罗喉", "计都"):
+            self.assertIn(body, svg)
 
 
 if __name__ == "__main__":

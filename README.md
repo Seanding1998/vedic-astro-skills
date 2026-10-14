@@ -13,6 +13,7 @@
 | JHora markdown/PDF 导入 | 已支持 | `jhora_markdown_bridge.py` 与 `chart_sanity_check.py` |
 | 紧凑 Ashtakavarga 表解析 | 已支持 | 支持 JHora `3x3` 边框格式 |
 | 原生 D1 排盘 | 已支持 | Swiss Ephemeris、TRUE_CITRA、Mean Node |
+| 图形盘面绘制 | 已支持 | 原生生成南印度式 D1 SVG，并在 Markdown 摘要中嵌入引用 |
 | SAV/BAV 原生计算 | 已支持 | 原生 D1 星座落点 + PyJHora Ashtakavarga 矩阵 |
 | SAV/BAV 守恒校验 | 已支持 | SAV=337、BAV 行常量、BAV 到 SAV 列和 |
 | 独立智能体断后校验 | 已支持 | 只能由新启动、无历史上下文子代理执行的两阶段证据账本审查；固定 PASS/REVISE 门槛 |
@@ -21,6 +22,8 @@
 | D9/D10/D4/D5 | 尝试输出 | 依赖 PyJHora，当前不作为 CI 的通过条件 |
 | Shadbala 修正层 | 未实现 | 继续从 JHora 导出取得 |
 | 完整 MD/AD/PD Vimsottari | 未实现 | 不用于月级或日级窗口结论 |
+
+本地排盘能力、CNWU16 上游实现、隔离安装结果和接入条件见[排盘能力调研与接入评估](排盘能力调研与接入评估.md)。
 
 ## 两条数据路径
 
